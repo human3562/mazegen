@@ -24,13 +24,13 @@ private:
 	std::stack<Cell*> stack;
 
 	sf::Color wallColor = sf::Color(160, 160, 160);
-	float wallColor_t[3] = { 160 / 255 };
+	float wallColor_t[3] = { 160 / 255.f, 160 / 255.f, 160 / 255.f };
 	sf::Color bgColor = sf::Color(100, 100, 100);
-	float bgColor_t[3] = {100/255, 100/255, 100/255};
+	float bgColor_t[3] = {100/255.f, 100/255.f, 100/255.f };
 	sf::Color c_visited = sf::Color(0, 65, 110, 88);
-	float c_visited_t[4] = {0, 65/255, 110/255, 88/255};
+	float c_visited_t[4] = {0, 65/255.f, 110/255.f, 88/255.f };
 	sf::Color c_current = sf::Color(37, 0, 255, 105);
-	float c_current_t[4] = {37/255, 0, 1, 105/255};
+	float c_current_t[4] = {37/255.f, 0, 1, 105/255.f };
 
 	Cell* current = nullptr;
 	int index(int i, int j);
