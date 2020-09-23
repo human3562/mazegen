@@ -41,6 +41,7 @@ private:
 	int w = 20;
 	int dimensions = 10;
 	bool animate = true;
+	bool show_visited = false;
 	bool done = false;
 };
 

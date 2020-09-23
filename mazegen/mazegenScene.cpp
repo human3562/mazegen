@@ -29,7 +29,7 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 				}
 				else {
 					done = true;
-					std::cout << "done!" << std::endl;
+					//std::cout << "done!" << std::endl;
 				}
 			}
 		}
@@ -62,7 +62,7 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 	ImGui::Begin("Settings", &p, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
 	std::string fps = "FPS: " + std::to_string(1.0f / fElapsedTime);
 	ImGui::Text(fps.c_str());
-	if (ImGui::SliderInt("gridSize", &dimensions, 2, 100)) {
+	if (ImGui::SliderInt("gridSize", &dimensions, 2, 200)) {
 		reset(window);
 	}
 	ImGui::Checkbox("Animate", &animate);
@@ -82,11 +82,11 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 		bgColor.g = static_cast<sf::Uint8>(bgColor_t[1] * 255.f);
 		bgColor.b = static_cast<sf::Uint8>(bgColor_t[2] * 255.f);
 	}
-	if (ImGui::ColorEdit4("visited", c_visited_t)) {
+	if (ImGui::ColorEdit3("visited", c_visited_t)) {
 		c_visited.r = static_cast<sf::Uint8>(c_visited_t[0] * 255.f);
 		c_visited.g = static_cast<sf::Uint8>(c_visited_t[1] * 255.f);
 		c_visited.b = static_cast<sf::Uint8>(c_visited_t[2] * 255.f);
-		c_visited.a = static_cast<sf::Uint8>(c_visited_t[3] * 255.f);
+		//c_visited.a = static_cast<sf::Uint8>(c_visited_t[3] * 255.f);
 	}
 	if (ImGui::ColorEdit4("current", c_current_t)) {
 		c_current.r = static_cast<sf::Uint8>(c_current_t[0] * 255.f);
@@ -94,6 +94,7 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 		c_current.b = static_cast<sf::Uint8>(c_current_t[2] * 255.f);
 		c_current.a = static_cast<sf::Uint8>(c_current_t[3] * 255.f);
 	}
+	ImGui::Checkbox("fill visited cells", &show_visited);
 
 	ImGui::End();
 
@@ -184,10 +185,11 @@ int MazegenScene::checkCellNeighbors(Cell* cell) {
 }
 
 void MazegenScene::showCell(sf::RenderWindow* window, Cell* cell) {
+	if (cell->walls[0] && cell->walls[1] && cell->walls[2] && cell->walls[3]) return;
 	int x = cell->i * w;
 	int y = cell->j * w;
 
-	if (cell->visited) {
+	if (cell->visited && show_visited) {
 		sf::RectangleShape rect;
 		rect.setSize(sf::Vector2f(w, w));
 		rect.setFillColor(c_visited);
@@ -204,13 +206,13 @@ void MazegenScene::showCell(sf::RenderWindow* window, Cell* cell) {
 	}
 
 	//TOP
-	if (cell->walls[0]) {
+	/*if (cell->walls[0]) {
 		sf::Vertex line[] = {
 			sf::Vertex(sf::Vector2f(x, y), wallColor),
 			sf::Vertex(sf::Vector2f(x + w, y), wallColor)
 		};
 		window->draw(line, 2, sf::Lines);
-	}
+	}*/
 
 	//RIGHT
 	if (cell->walls[1]) {
@@ -230,12 +232,12 @@ void MazegenScene::showCell(sf::RenderWindow* window, Cell* cell) {
 		window->draw(line, 2, sf::Lines);
 	}
 
-	//LEFT
-	if (cell->walls[3]) {
-		sf::Vertex line[] = {
-			sf::Vertex(sf::Vector2f(x, y), wallColor),
-			sf::Vertex(sf::Vector2f(x, y + w), wallColor)
-		};
-		window->draw(line, 2, sf::Lines);
-	}
+	////LEFT
+	//if (cell->walls[3]) {
+	//	sf::Vertex line[] = {
+	//		sf::Vertex(sf::Vector2f(x, y), wallColor),
+	//		sf::Vertex(sf::Vector2f(x, y + w), wallColor)
+	//	};
+	//	window->draw(line, 2, sf::Lines);
+	//}
 }
