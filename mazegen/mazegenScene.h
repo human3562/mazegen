@@ -3,13 +3,19 @@
 #include "imgui.h"
 #include "imgui-SFML.h"
 #include <stack>
+#include <set>
 
 struct Cell {
 	int i, j;
 	bool walls[4] = { true, true, true, true };
 	bool visited = false;
+	int f = 0; int g = 0; int h = 0;
+	Cell* previous = nullptr;
 	Cell(int i, int j) : i(i), j(j) {};
 };
+inline bool operator<(const Cell& lhs, const Cell& rhs) {
+	return lhs.f < rhs.f;
+}
 
 class MazegenScene : public GameScene
 {
@@ -18,6 +24,7 @@ public:
 	void Update(sf::RenderWindow* window, float fElapsedTime) override;
 	void EventHandle(sf::RenderWindow* window, sf::Event* event) override;
 	e_gameState switchSceneEvent() override;
+	~MazegenScene() { delete img_visitedCells; delete tx_visitedCells; }
 
 private:
 	std::vector<Cell> cells;
@@ -32,16 +39,27 @@ private:
 	sf::Color c_current = sf::Color(37, 0, 255, 105);
 	float c_current_t[4] = {37/255.f, 0, 1, 105/255.f };
 
+	sf::Image* img_visitedCells;	//why...
+	sf::Texture* tx_visitedCells;	   //
+	sf::Sprite spr_visitedCells;	   //
+
 	Cell* current = nullptr;
 	int index(int i, int j);
 	void showCell(sf::RenderWindow* window, Cell* cell);
 	void reset(sf::RenderWindow* window);
 	int checkCellNeighbors(Cell* cell);
+	std::vector<Cell*> getCellNeighbors(Cell* cell);
 	int cols, rows;
 	int w = 20;
 	int dimensions = 10;
 	bool animate = true;
 	bool show_visited = false;
 	bool done = false;
+
+	//A*
+	bool solved = false;
+	bool shouldSolve = false;
+	std::set<Cell*> open_set;
+	std::set<Cell*> closed_set;
 };
 

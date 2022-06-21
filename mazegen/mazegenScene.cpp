@@ -1,21 +1,30 @@
 #include "mazegenScene.h"
 
+
 void MazegenScene::Start(sf::RenderWindow* window){
 	isStarted = true;
 	reset(window);
+	done = false;
 }
 
 void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 	window->clear(bgColor);
+	
 	ImGui::SFML::Update(*window, sf::Time(sf::seconds(fElapsedTime)));
 	
+	tx_visitedCells->update(*img_visitedCells);
+	if (show_visited) {
+		window->draw(spr_visitedCells);
+	}
 
 	for (int i = 0; i < cells.size(); i++) {
 		showCell(window, &cells[i]);
 	}
+
 	if (animate) {
 		if (!done) {
 			current->visited = true;
+			img_visitedCells->setPixel(current->i, current->j, c_visited);
 			int neighborID = checkCellNeighbors(current);
 			if (neighborID >= 0) {
 				Cell* next = &cells[neighborID];
@@ -54,6 +63,99 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 				}
 			}
 		}
+		for (int i = 0; i < cells.size(); i++) {
+			Cell* c = &cells[i];
+			img_visitedCells->setPixel(c->i, c->j, c_visited);
+		}
+	}
+
+	//A*
+	if (animate) {
+		if (shouldSolve) {
+			if (open_set.size() > 0 && !solved) {
+				Cell* current_astar = *open_set.begin();
+				if (current_astar->i == dimensions - 1 && current_astar->j == dimensions - 1) {
+					solved = true;
+					std::cout << "solved??" << std::endl;
+				}
+
+				open_set.erase(current_astar);
+				closed_set.insert(current_astar);
+
+				std::vector<Cell*> neighbors = getCellNeighbors(current_astar);
+				for (int i = 0; i < neighbors.size(); i++) {
+					Cell* neighbor = neighbors[i];
+					if (closed_set.find(neighbor) != closed_set.end()) continue;
+
+					int newG = current_astar->g + 1;
+					if (open_set.find(neighbor) != open_set.end()) {
+						if (newG < neighbor->g) neighbor->g = newG;
+					}
+					else {
+						neighbor->g = newG;
+						open_set.insert(neighbor);
+					}
+					Cell* endCell = &cells[cells.size() - 1];
+					neighbor->h = std::abs(neighbor->i - endCell->i) + std::abs(neighbor->j - endCell->j);
+					neighbor->f = neighbor->g + neighbor->h;
+					neighbor->previous = current_astar;
+				}
+				Cell* drawCell = current_astar;
+				while (drawCell->previous != nullptr) {
+					sf::Vertex line[] = {
+						sf::Vertex(sf::Vector2f(drawCell->i * w + w / 2.0, drawCell->j * w + w / 2.0), sf::Color::Red),
+						sf::Vertex(sf::Vector2f(drawCell->previous->i * w + w / 2.0, drawCell->previous->j * w + w / 2.0), sf::Color::Red)
+					};
+					window->draw(line, 2, sf::Lines);
+					drawCell = drawCell->previous;
+				}
+			}
+		}
+	}
+	else {
+		if (shouldSolve) {
+			while (open_set.size() > 0 && !solved) {
+				Cell* current_astar = *open_set.begin();
+				if (current_astar->i == dimensions - 1 && current_astar->j == dimensions - 1) {
+					solved = true;
+					break;
+				}
+
+				open_set.erase(current_astar);
+				closed_set.insert(current_astar);
+
+				std::vector<Cell*> neighbors = getCellNeighbors(current_astar);
+				for (int i = 0; i < neighbors.size(); i++) {
+					Cell* neighbor = neighbors[i];
+					if (closed_set.find(neighbor) != closed_set.end()) continue;
+
+					int newG = current_astar->g + 1;
+					if (open_set.find(neighbor) != open_set.end()) {
+						if (newG < neighbor->g) neighbor->g = newG;
+					}
+					else {
+						neighbor->g = newG;
+						open_set.insert(neighbor);
+					}
+					Cell* endCell = &cells[cells.size() - 1];
+					neighbor->h = std::abs(neighbor->i - endCell->i) + std::abs(neighbor->j - endCell->j);
+					neighbor->f = neighbor->g + neighbor->h;
+					neighbor->previous = current_astar;
+				}
+			}
+		}
+	}
+
+	if (solved) {
+		Cell* drawCell = &cells[cells.size()-1];
+		while (drawCell->previous != nullptr) {
+			sf::Vertex line[] = {
+				sf::Vertex(sf::Vector2f(drawCell->i * w + w / 2.0, drawCell->j * w + w / 2.0), sf::Color::Red),
+				sf::Vertex(sf::Vector2f(drawCell->previous->i * w + w / 2.0, drawCell->previous->j * w + w / 2.0), sf::Color::Red)
+			};
+			window->draw(line, 2, sf::Lines);
+			drawCell = drawCell->previous;
+		}
 	}
 
 	ImGui::SetNextWindowSize(ImVec2(300, 600));
@@ -63,12 +165,17 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 	std::string fps = "FPS: " + std::to_string(1.0f / fElapsedTime);
 	ImGui::Text(fps.c_str());
 	if (ImGui::SliderInt("gridSize", &dimensions, 2, 200)) {
-		reset(window);
+		//reset(window);
 	}
 	ImGui::Checkbox("Animate", &animate);
 	if (ImGui::Button("Generate")) {
 		reset(window);
-		done = false;
+	}
+	if (ImGui::Button("Solve")) {
+		if (done) {
+			std::cout << "should solve..." << std::endl;
+			shouldSolve = true;
+		}
 	}
 	ImGui::Text("");
 	ImGui::Text("Colors:");
@@ -116,9 +223,27 @@ int MazegenScene::index(int i, int j) {
 }
 
 void MazegenScene::reset(sf::RenderWindow* window) {
-	done = true;
+	//window->clear(bgColor);
+
+	open_set.clear();
+	closed_set.clear();
+
+	delete img_visitedCells;
+	img_visitedCells = new sf::Image();
+	img_visitedCells->create(dimensions, dimensions, bgColor);
+
+	delete tx_visitedCells;
+	tx_visitedCells = new sf::Texture();
+	tx_visitedCells->create(dimensions, dimensions);
+	tx_visitedCells->setSmooth(true);
+	spr_visitedCells.setTexture(*tx_visitedCells, true);
+
 	w = window->getSize().y / dimensions;
-	//done = true;
+	spr_visitedCells.setScale(sf::Vector2f(w,w));
+
+	done = false;
+	solved = false;
+	shouldSolve = false;
 	stack = std::stack<Cell*>();
 	cells.clear();
 	cols = dimensions; rows = dimensions;
@@ -130,6 +255,34 @@ void MazegenScene::reset(sf::RenderWindow* window) {
 		}
 	}
 	current = &cells[0];
+	open_set.insert(&cells[0]);
+}
+
+std::vector<Cell*> MazegenScene::getCellNeighbors(Cell* cell) {
+	std::vector<Cell*> neighbors;
+
+	int top = index(cell->i, cell->j - 1);
+	int right = index(cell->i + 1, cell->j);
+	int bottom = index(cell->i, cell->j + 1);
+	int left = index(cell->i - 1, cell->j);
+
+	if (top >= 0)
+		if (!cells[top].walls[2])
+			neighbors.push_back(&cells[top]);
+
+	if (right >= 0 && right < cells.size())
+		if (!cells[right].walls[3])
+			neighbors.push_back(&cells[right]);
+
+	if (bottom >= 0 && bottom < cells.size())
+		if (!cells[bottom].walls[0])
+			neighbors.push_back(&cells[bottom]);
+
+	if (left >= 0)
+		if (!cells[left].walls[1])
+			neighbors.push_back(&cells[left]);
+
+	return neighbors;
 }
 
 int MazegenScene::checkCellNeighbors(Cell* cell) {
@@ -144,11 +297,11 @@ int MazegenScene::checkCellNeighbors(Cell* cell) {
 	if (!cells[top].visited) 
 		neighbors.push_back(&cells[top]);
 
-	if(right >= 0)
+	if(right >= 0 && right < cells.size())
 	if (!cells[right].visited) 
 		neighbors.push_back(&cells[right]);
 
-	if(bottom >= 0)
+	if(bottom >= 0 && bottom < cells.size())
 	if (!cells[bottom].visited) 
 		neighbors.push_back(&cells[bottom]);
 
@@ -189,13 +342,13 @@ void MazegenScene::showCell(sf::RenderWindow* window, Cell* cell) {
 	int x = cell->i * w;
 	int y = cell->j * w;
 
-	if (cell->visited && show_visited) {
-		sf::RectangleShape rect;
-		rect.setSize(sf::Vector2f(w, w));
-		rect.setFillColor(c_visited);
-		rect.setPosition(x, y);
-		window->draw(rect);
-	}
+	//if (cell->visited && show_visited) {
+	//	sf::RectangleShape rect;
+	//	rect.setSize(sf::Vector2f(w, w));
+	//	rect.setFillColor(c_visited);
+	//	rect.setPosition(x, y);
+	//	window->draw(rect);
+	//}
 
 	if (cell == current) {
 		sf::RectangleShape rect;
