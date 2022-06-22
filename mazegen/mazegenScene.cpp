@@ -73,7 +73,7 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 	if (animate) {
 		if (shouldSolve) {
 			if (open_set.size() > 0 && !solved) {
-				Cell* current_astar = *open_set.begin();
+				Cell* current_astar = *open_set.rbegin();
 				if (current_astar->i == dimensions - 1 && current_astar->j == dimensions - 1) {
 					solved = true;
 					std::cout << "solved??" << std::endl;
@@ -81,11 +81,14 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 
 				open_set.erase(current_astar);
 				closed_set.insert(current_astar);
+				img_visitedCells->setPixel(current_astar->i, current_astar->j, sf::Color(100,100,100,100));
 
 				std::vector<Cell*> neighbors = getCellNeighbors(current_astar);
 				for (int i = 0; i < neighbors.size(); i++) {
 					Cell* neighbor = neighbors[i];
 					if (closed_set.find(neighbor) != closed_set.end()) continue;
+
+					img_visitedCells->setPixel(neighbor->i, neighbor->j, sf::Color::Green);
 
 					int newG = current_astar->g + 1;
 					if (open_set.find(neighbor) != open_set.end()) {
@@ -115,7 +118,7 @@ void MazegenScene::Update(sf::RenderWindow* window, float fElapsedTime){
 	else {
 		if (shouldSolve) {
 			while (open_set.size() > 0 && !solved) {
-				Cell* current_astar = *open_set.begin();
+				Cell* current_astar = *open_set.rbegin();
 				if (current_astar->i == dimensions - 1 && current_astar->j == dimensions - 1) {
 					solved = true;
 					break;
@@ -235,7 +238,7 @@ void MazegenScene::reset(sf::RenderWindow* window) {
 	delete tx_visitedCells;
 	tx_visitedCells = new sf::Texture();
 	tx_visitedCells->create(dimensions, dimensions);
-	tx_visitedCells->setSmooth(true);
+	//tx_visitedCells->setSmooth(true);
 	spr_visitedCells.setTexture(*tx_visitedCells, true);
 
 	w = window->getSize().y / dimensions;
