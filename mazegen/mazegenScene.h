@@ -13,9 +13,13 @@ struct Cell {
 	Cell* previous = nullptr;
 	Cell(int i, int j) : i(i), j(j) {};
 };
-inline bool operator<(const Cell& lhs, const Cell& rhs) {
-	return lhs.f < rhs.f;
-}
+struct cell_compare {
+	//using is_transparent = void;
+	bool operator() (Cell const *lhs, Cell const *rhs) const {
+		//if (lhs->f == rhs->f) return lhs < rhs;
+		return lhs->f < rhs->f;
+	}
+};
 
 class MazegenScene : public GameScene
 {
@@ -59,7 +63,7 @@ private:
 	//A*
 	bool solved = false;
 	bool shouldSolve = false;
-	std::set<Cell*> open_set;
-	std::set<Cell*> closed_set;
+	std::multiset<Cell*, cell_compare> open_set;
+	std::multiset<Cell*> closed_set;
 };
 
